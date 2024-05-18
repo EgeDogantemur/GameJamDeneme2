@@ -10,6 +10,9 @@ public class Node : MonoBehaviour
     List<Node> m_neighborNodes = new List<Node>();
     public List<Node> NeighborNodes {  get { return m_neighborNodes; } }
 
+    List<Node> m_linkedNodes = new List<Node>();
+    public List<Node> LinkedNodes { get { return m_linkedNodes; } }
+
     Board m_board;
 
     public GameObject geometry;
@@ -19,6 +22,8 @@ public class Node : MonoBehaviour
     public bool autoRun; //does animation gets activated at the start
     public float delay = 1f; //before animation delay
     bool m_isInitialized = false;
+
+    public LayerMask obstacleLayer;
 
     private void Awake()
     {
@@ -87,8 +92,15 @@ public class Node : MonoBehaviour
         yield return new WaitForSeconds(delay);
         foreach(Node n in m_neighborNodes)
         {
-            LinkNode(n);
-            n.InitNode();
+            if (!m_linkedNodes.Contains(n))
+            {
+                Obstacle obstacle = FindObstacle(n);
+                if (obstacle == null)
+                {
+                    LinkNode(n);
+                    n.InitNode();
+                }
+            }
         }
     }
 
@@ -101,7 +113,29 @@ public class Node : MonoBehaviour
 
             Link link = linkInstance.GetComponent<Link>();
             if (link != null)
+            {
                 link.DrawLink(transform.position, targetNode.transform.position);
+            }
+            if (!m_linkedNodes.Contains(targetNode))
+            {
+                m_linkedNodes.Add(targetNode);
+            }
+            if (!targetNode.LinkedNodes.Contains(this))
+            {
+                targetNode.LinkedNodes.Add(this);
+            }
         }
+    }
+
+    Obstacle FindObstacle(Node targetNode)
+    {
+        Vector3 checkDirection = targetNode.transform.position - transform.position;
+        RaycastHit raycastHit;
+
+        if (Physics.Raycast(transform.position, checkDirection, out raycastHit, Board.spacing + 0.1f, obstacleLayer))
+        {
+            return raycastHit.collider.GetComponent<Obstacle>();
+        }
+        return null;
     }
 }
